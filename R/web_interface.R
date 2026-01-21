@@ -281,6 +281,7 @@ AphiaClassificationByAphiaID <- function(aphiaID, df = "wide") {
     }
 }
 
+#' Get taxonomy from aphia IDs
 #' @export
 AphiaClassificationsByAphiaIDs <- function(aphiaIDs) {
     pb <- cli::cli_progress_bar(

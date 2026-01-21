@@ -1,3 +1,4 @@
+#' Get records from aphia IDs
 #' @importFrom dplyr left_join
 #' @export
 get_records <- function(aphiaIDs) {
@@ -7,6 +8,7 @@ get_records <- function(aphiaIDs) {
     return(res)
 }
 
+#' Get records of all species from high taxon
 #' @export
 get_records_hr <- function(aphiaID) {
     aphiaIDs <- AphiaChildrenByAphiaID(aphiaID)@value$aphiaID
