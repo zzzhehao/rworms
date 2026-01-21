@@ -1,5 +1,5 @@
 .Rproj.user
-.code-workspace
+*.code-workspace
 debug.R
 
 # Modules / Libs
