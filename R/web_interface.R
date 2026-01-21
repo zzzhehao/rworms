@@ -281,6 +281,7 @@ AphiaClassificationByAphiaID <- function(aphiaID, df = "wide") {
     }
 }
 
+#' @export
 AphiaClassificationsByAphiaIDs <- function(aphiaIDs) {
     pb <- cli::cli_progress_bar(
         format = "Retrieving Taxnonmy {cli::pb_current} {cli::pb_bar} {cli::pb_percent}",
