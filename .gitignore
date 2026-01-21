@@ -1,6 +1,7 @@
 .Rproj.user
 *.code-workspace
 debug.R
+demo/
 
 # Modules / Libs
 node_modules/
