@@ -217,7 +217,7 @@ AphiaDistributionsByAphiaID <- function(aphiaID) {
     url <- sprintf("%s/AphiaDistributionsByAphiaID/%d", .db_url(), aphiaID)
     reqres <- request(url)
     if (reqres@exit > 0) {
-        cli::cli_alert_danger("AphiaID {aphiaID} does not have any distribution data.")
+        cli::cli_alert_danger("AphiaID {aphiaID}: {AphiaNameByAphiaID(aphiaID)@value} does not have any distribution data.")
         result(NULL, reqres@exit) %>% return()
     } else {
         res <- reqres@value %>% 
@@ -226,6 +226,7 @@ AphiaDistributionsByAphiaID <- function(aphiaID) {
     }
 }
 
+#' Get Distribution from Aphia IDs
 AphiaDistributionsByAphiaIDs <- function(aphiaIDs) {
     .is_valid_aphiaID(aphiaIDs)
     AphiaRecords <- AphiaRecordsByAphiaIDs(aphiaIDs)@value
