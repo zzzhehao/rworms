@@ -4,10 +4,12 @@
 \alias{get_taxonomy_hr}
 \title{Get taxonomy (records) of all species from a high taxon}
 \usage{
-get_taxonomy_hr(aphiaID)
+get_taxonomy_hr(aphiaID, ...)
 }
 \arguments{
 \item{aphiaID}{Numeric. An Aphia ID of higher taxon (> species).}
+
+\item{...}{Further arguments passed to \code{\link[=AphiaChildrenByAphiaID]{AphiaChildrenByAphiaID()}}}
 }
 \value{
 A dataframe with taxonomic information of all species of \code{aphiaID}.

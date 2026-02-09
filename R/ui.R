@@ -12,10 +12,11 @@ get_taxonomy <- function(aphiaIDs) {
 
 #' Get taxonomy (records) of all species from a high taxon 
 #' @param aphiaID Numeric. An Aphia ID of higher taxon (> species).
+#' @param ... Further arguments passed to [AphiaChildrenByAphiaID()]
 #' @return A dataframe with taxonomic information of all species of \code{aphiaID}.
 #' @export
-get_taxonomy_hr <- function(aphiaID) {
-    aphiaIDs <- AphiaChildrenByAphiaID(aphiaID)@value$aphiaID
+get_taxonomy_hr <- function(aphiaID, ...) {
+    aphiaIDs <- AphiaChildrenByAphiaID(aphiaID, ...)@value$aphiaID
     get_taxonomy(aphiaIDs)
 }
 

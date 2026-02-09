@@ -86,6 +86,73 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
     if (idx) {return(isna.ls)} else {return(isvalid)}
 }
 
+# #' @importFrom dplyr bind_rows
+# #' @importFrom dplyr filter
+# #' @importFrom dplyr pull
+# #' @importFrom dplyr %>% 
+# #' @importFrom dplyr rename
+# #' @importFrom purrr map
+# #' @importFrom purrr map_dfr
+# .get_AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = "true", extant = "true", pb) {
+#     # init
+#     url_root <- sprintf("%s/AphiaChildrenByAphiaID/", .db_url())
+#     offset <- 1
+#     result <- data.frame()
+
+#     repeat({
+#         request <- sprintf(
+#             "%s%d?marine_only=%s&extant_only=%s&offset=%d", 
+#             url_root, aphiaID, marine, extant, offset
+#         )
+#         reqres <- request(request)
+#         if (reqres@exit == 1) {
+#             break
+#         } else {
+#             offset <- offset + 50
+#             result <- bind_rows(result, reqres@value)
+#         }
+#         cli::cli_progress_update(id = pb)
+#     })
+
+#     # exit if nothing retrieved
+#     if (all(dim(result) == c(0, 0))) {return(list(value = invisible(NULL), exit = 1))}
+
+#     # filter: only accepted names
+#     if (accept) {
+#         result <- result %>% 
+#             filter(status == "accepted")
+#     }
+
+#     # return if not recursive
+#     if (!recursive) {return(list(value = result, exit = 0))}
+
+#     aphiaID_highrank <- result %>% 
+#         filter(rank != "Species") %>% 
+#         # rename(aphiaID = AphiaID) %>% 
+#         pull(aphiaID) 
+
+#     # return if no higher rank to loop
+#     if (length(aphiaID_highrank) == 0) {return(list(value = result, exit = 0))}
+
+#     # recursive step
+#     result_rec <- map(aphiaID_highrank, ~{
+#         .get_AphiaChildrenByAphiaID(.x, T, T, marine, extant, pb)
+#     })
+#     result_rec <- result_rec %>% 
+#         rlist::list.filter(exit == 0) %>% 
+#         map_dfr(~.x$value) 
+
+#     result_merged <- bind_rows(
+#         result %>% filter(!aphiaID %in% aphiaID_highrank),
+#         result_rec 
+#     )
+
+#     # exit if no children
+#     if (all(dim(result_merged) == c(0, 0))) {return(list(value = invisible(NA), exit = 1))}
+
+#     return(list(value = result_merged, exit = 0))
+# }
+
 #' @importFrom dplyr bind_rows
 #' @importFrom dplyr filter
 #' @importFrom dplyr pull
@@ -109,7 +176,18 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
             break
         } else {
             offset <- offset + 50
-            result <- bind_rows(result, reqres@value)
+            
+            # FIX: Enforce character type for optional columns to prevent bind_rows() type mismatch error
+            batch_data <- reqres@value
+            if ("unacceptreason" %in% names(batch_data)) {
+                batch_data$unacceptreason <- as.character(batch_data$unacceptreason)
+            }
+            # Also valid_authority can sometimes be inconsistent
+            if ("valid_authority" %in% names(batch_data)) {
+                batch_data$valid_authority <- as.character(batch_data$valid_authority)
+            }
+
+            result <- bind_rows(result, batch_data)
         }
         cli::cli_progress_update(id = pb)
     })
@@ -138,6 +216,8 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
     result_rec <- map(aphiaID_highrank, ~{
         .get_AphiaChildrenByAphiaID(.x, T, T, marine, extant, pb)
     })
+    
+    # We must also ensure the recursive results are bound safely
     result_rec <- result_rec %>% 
         rlist::list.filter(exit == 0) %>% 
         map_dfr(~.x$value) 
@@ -153,6 +233,12 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
     return(list(value = result_merged, exit = 0))
 }
 
+#' Retrieving Childrens from an Aphia ID
+#' @export
+#' @param recursive logical. Whether to loop through children that are not species. If \code{TRUE} (default), all species belonging to given taxon is returned, if \code{FALSE}, only the direct children are returned.
+#' @param accept logical. Whether to only return the accepted taxa.
+#' @param marine logical. Whether to only return the marine taxa.
+#' @param extant logical. Whether to only return the extant taxa. 
 AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = T, extant = T) {
     .is_valid_aphiaID(aphiaID)
     if (marine) {marine <- "true"} else {marine <- "false"}
