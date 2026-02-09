@@ -2,7 +2,7 @@
 
 export(AphiaChildrenByAphiaID)
 export(AphiaClassificationsByAphiaIDs)
-export(get_distributions)
+export(get_distribution)
 export(get_taxonomy)
 export(get_taxonomy_hr)
 importFrom(S7,S7_object)
