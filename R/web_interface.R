@@ -138,14 +138,19 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
     result_rec <- map(aphiaID_highrank, ~{
         .get_AphiaChildrenByAphiaID(.x, T, T, marine, extant, pb)
     })
-    result <- result_rec %>% 
+    result_rec <- result_rec %>% 
         rlist::list.filter(exit == 0) %>% 
         map_dfr(~.x$value) 
 
-    # exit if no children
-    if (all(dim(result) == c(0, 0))) {return(list(value = invisible(NA), exit = 1))}
+    result_merged <- bind_rows(
+        result %>% rename(aphiaID = AphiaID) %>% filter(!aphiaID %in% aphiaID_highrank),
+        result_rec %>% rename(aphiaID = AphiaID)
+    )
 
-    return(list(value = result, exit = 0))
+    # exit if no children
+    if (all(dim(result_merged) == c(0, 0))) {return(list(value = invisible(NA), exit = 1))}
+
+    return(list(value = result_merged, exit = 0))
 }
 
 AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = T, extant = T) {
@@ -167,8 +172,8 @@ AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = 
         return(invisible(NULL))
     }
 
-    res <- result$value %>% 
-        rename(aphiaID = AphiaID)
+    res <- result$value 
+        # rename(aphiaID = AphiaID)
 
     result(res, 0) %>% return()
 }

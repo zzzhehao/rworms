@@ -29,7 +29,8 @@ get_distributions <- function(aphiaIDs) {
     if (res.dis@exit > 0) {cli::cli_alert_warning(res.dis@message)}
 
     res.tax <- get_taxonomy(aphiaIDs)
-    left_join(res.dis@value, res.tax, by = "aphiaID") %>% 
-        dplyr::select(scientificName, dplyr::everything())
+    res.dis@value
+    # left_join(res.dis@value) 
+        # dplyr::select(scientificName, dplyr::everything())
 }
 
