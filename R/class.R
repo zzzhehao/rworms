@@ -116,8 +116,7 @@ request <- new_class(
                 }
 
                 if ("AphiaID" %in% names(value)) {
-                    value <- value %>% 
-                        dplyr::rename("aphiaID" = "AphiaID")
+                    names(value)[names(value) == "AphiaID"] <- "aphiaID"
                 }
 
                 list(

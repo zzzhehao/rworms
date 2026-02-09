@@ -256,34 +256,87 @@ AphiaDistributionsByAphiaIDs <- function(aphiaIDs) {
     result(res, exits) %>% return()
 }
 
-#' @importFrom rrapply rrapply
+# #' @importFrom rrapply rrapply
+# #' @importFrom tidyr pivot_wider
+# #' @importFrom tidyr pivot_longer
+# #' @importFrom tibble as_tibble
+# AphiaClassificationByAphiaID <- function(aphiaID, df = "wide") {
+#     url <- sprintf("%s/AphiaClassificationByAphiaID/%d", .db_url(), aphiaID)
+#     reqres <- request(url)
+#     if (reqres@exit > 1) {
+#         cli::cli_alert_danger("AphiaID {aphiaID} failed to retrieve taxonomic classification data.")
+#         return(result(NULL, 1, "Failed to retrieve taxonomic classification data."))
+#     }
+    
+#     tf <- reqres@value %>% rrapply(how = "flatten")
+
+#     df_long <- map_dfr(1:((length(tf)-1)/3), \(i){
+#         tf[-length(tf)][((i-1)*3+1):(i*3)] %>% 
+#             as_tibble()
+#     })
+#         # rename(aphiaID = AphiaID)
+
+#     df_wide <- df_long %>% 
+#         pivot_wider(., id_cols = !aphiaID, names_from = rank, values_from = scientificname) %>% 
+#         mutate(aphiaID = aphiaID, .before = everything())
+
+#     if (df == "wide") {
+#         result(df_wide, reqres@exit) %>% return()
+#     } else if (df == "long") {    
+#         result(df_long, reqres@exit) %>% return()
+#     }
+# }
+
+#' @importFrom dplyr bind_rows
+#' @importFrom tibble tibble
 #' @importFrom tidyr pivot_wider
-#' @importFrom tidyr pivot_longer
-#' @importFrom tibble as_tibble
 AphiaClassificationByAphiaID <- function(aphiaID, df = "wide") {
     url <- sprintf("%s/AphiaClassificationByAphiaID/%d", .db_url(), aphiaID)
     reqres <- request(url)
+    
     if (reqres@exit > 1) {
         cli::cli_alert_danger("AphiaID {aphiaID} failed to retrieve taxonomic classification data.")
         return(result(NULL, 1, "Failed to retrieve taxonomic classification data."))
     }
     
-    tf <- reqres@value %>% rrapply(how = "flatten")
+    # 1. Initialize a list to store the hierarchy
+    hierarchy_list <- list()
+    current_node <- reqres@value
+    
+    # 2. Traverse the linked list (parent -> child -> child ...)
+    while (!is.null(current_node)) {
+        hierarchy_list[[length(hierarchy_list) + 1]] <- tibble::tibble(
+            # Extract only the standard fields we need for the wide table
+            rank_id = current_node$AphiaID, 
+            rank = current_node$rank,
+            scientificname = current_node$scientificname
+        )
+        # Move to the next level down
+        current_node <- current_node$child
+    }
+    
+    # 3. Bind into a long format dataframe
+    df_long <- bind_rows(hierarchy_list)
 
-    df_long <- map_dfr(1:((length(tf)-1)/3), \(i){
-        tf[-length(tf)][((i-1)*3+1):(i*3)] %>% 
-            as_tibble()
-    })
-        # rename(aphiaID = AphiaID)
-
+    if (df == "long") {    
+        # Add the input ID to the long form as well for consistency
+        df_long <- df_long %>% mutate(target_aphiaID = aphiaID)
+        result(df_long, reqres@exit) %>% return()
+    }
+    
+    # 4. Pivot to Wide (One row per input AphiaID)
+    # columns will be: Kingdom, Phylum, Class, ... filled with scientific names
     df_wide <- df_long %>% 
-        pivot_wider(., id_cols = !aphiaID, names_from = rank, values_from = scientificname) %>% 
+        pivot_wider(
+            id_cols = character(0), # Don't use any column as ID, we want 1 row total
+            names_from = rank, 
+            values_from = scientificname
+        ) %>% 
+        # Add the original input ID as the identifier column
         mutate(aphiaID = aphiaID, .before = everything())
 
     if (df == "wide") {
         result(df_wide, reqres@exit) %>% return()
-    } else if (df == "long") {    
-        result(df_long, reqres@exit) %>% return()
     }
 }
 
