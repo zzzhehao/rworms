@@ -128,7 +128,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
 
     aphiaID_highrank <- result %>% 
         filter(rank != "Species") %>% 
-        rename(aphiaID = AphiaID) %>% 
+        # rename(aphiaID = AphiaID) %>% 
         pull(aphiaID) 
 
     # return if no higher rank to loop
@@ -143,8 +143,8 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
         map_dfr(~.x$value) 
 
     result_merged <- bind_rows(
-        result %>% rename(aphiaID = AphiaID) %>% filter(!aphiaID %in% aphiaID_highrank),
-        result_rec %>% rename(aphiaID = AphiaID)
+        result %>% filter(!aphiaID %in% aphiaID_highrank),
+        result_rec 
     )
 
     # exit if no children
@@ -273,8 +273,8 @@ AphiaClassificationByAphiaID <- function(aphiaID, df = "wide") {
     df_long <- map_dfr(1:((length(tf)-1)/3), \(i){
         tf[-length(tf)][((i-1)*3+1):(i*3)] %>% 
             as_tibble()
-    }) %>% 
-        rename(aphiaID = AphiaID)
+    })
+        # rename(aphiaID = AphiaID)
 
     df_wide <- df_long %>% 
         pivot_wider(., id_cols = !aphiaID, names_from = rank, values_from = scientificname) %>% 

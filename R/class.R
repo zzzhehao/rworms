@@ -115,6 +115,11 @@ request <- new_class(
                     value <- jsonlite::fromJSON(raw_text, flatten = T)
                 }
 
+                if ("AphiaID" %in% names(value)) {
+                    value <- value %>% 
+                        dplyr::rename("aphiaID" = "AphiaID")
+                }
+
                 list(
                     value = value, 
                     exit = 0, 
