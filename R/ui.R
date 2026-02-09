@@ -23,6 +23,7 @@ get_taxonomy_hr <- function(aphiaID) {
 #' @param aphiaIDs A numeric vector of Aphia IDs.
 #' @return A dataframe of 
 #' @importFrom dplyr left_join
+#' @export
 get_distributions <- function(aphiaIDs) {
     res.dis <- AphiaDistributionsByAphiaIDs(aphiaIDs)
     if (res.dis@exit > 0) {cli::cli_alert_warning(res.dis@message)}
