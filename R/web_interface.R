@@ -23,6 +23,46 @@
     map_dfr(reqres.ls, ~.x@value)
 }
 
+#' Safe Bind Rows for API Schemas
+#' 
+#' Some columns at certain API request will return empty values, such as retrieving direct children at family level, species will be empty. Merging the request result together where certain column is empty at one hand side and not empty on the other hand causes crashes with \code{bind_rows}. This function checks before hand and convert the empty (logical) column to type of the corresponding column in the other dara frame. 
+#' 
+#' @importFrom dplyr bind_rows
+.safe_bind_rows <- function(df1, df2) {
+    # edge case
+    if (is.null(df1) || nrow(df1) == 0) return(df2)
+    if (is.null(df2) || nrow(df2) == 0) return(df1)
+
+    common_cols <- intersect(names(df1), names(df2))
+    if (length(common_cols) == 0) return(dplyr::bind_rows(df1, df2))
+
+    t1 <- vapply(df1[common_cols], typeof, character(1), USE.NAMES = TRUE)
+    t2 <- vapply(df2[common_cols], typeof, character(1), USE.NAMES = TRUE)
+
+    # check mismatches
+    mismatch_idx <- t1 != t2
+    
+    if (any(mismatch_idx)) {
+        mismatches <- common_cols[mismatch_idx]
+        
+        for (col in mismatches) {
+            type1 <- t1[[col]]
+            type2 <- t2[[col]]
+            
+            if (type1 == "logical") {
+                storage.mode(df1[[col]]) <- type2
+            } else if (type2 == "logical") {
+                storage.mode(df2[[col]]) <- type1
+            } else {
+                df1[[col]] <- as.character(df1[[col]])
+                df2[[col]] <- as.character(df2[[col]])
+            }
+        }
+    }
+    
+    dplyr::bind_rows(df1, df2)
+}
+
 AphiaNameByAphiaID <- function(aphiaID) {
     url <- sprintf("%s/AphiaNameByAphiaID/%d", .db_url(), aphiaID)
     reqres <- request(url)
@@ -187,7 +227,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
                 batch_data$valid_authority <- as.character(batch_data$valid_authority)
             }
 
-            result <- bind_rows(result, batch_data)
+            result <- .safe_bind_rows(result, batch_data)
         }
         cli::cli_progress_update(id = pb)
     })
@@ -222,7 +262,10 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
         rlist::list.filter(exit == 0) %>% 
         map_dfr(~.x$value) 
 
-    result_merged <- bind_rows(
+    result <- .sanitize_api_types(result)
+    result_rec <- .sanitize_api_types(result_rec)
+
+    result_merged <- .safe_bind_rows(
         result %>% filter(!aphiaID %in% aphiaID_highrank),
         result_rec 
     )
@@ -341,37 +384,6 @@ AphiaDistributionsByAphiaIDs <- function(aphiaIDs) {
 
     result(res, exits) %>% return()
 }
-
-# #' @importFrom rrapply rrapply
-# #' @importFrom tidyr pivot_wider
-# #' @importFrom tidyr pivot_longer
-# #' @importFrom tibble as_tibble
-# AphiaClassificationByAphiaID <- function(aphiaID, df = "wide") {
-#     url <- sprintf("%s/AphiaClassificationByAphiaID/%d", .db_url(), aphiaID)
-#     reqres <- request(url)
-#     if (reqres@exit > 1) {
-#         cli::cli_alert_danger("AphiaID {aphiaID} failed to retrieve taxonomic classification data.")
-#         return(result(NULL, 1, "Failed to retrieve taxonomic classification data."))
-#     }
-    
-#     tf <- reqres@value %>% rrapply(how = "flatten")
-
-#     df_long <- map_dfr(1:((length(tf)-1)/3), \(i){
-#         tf[-length(tf)][((i-1)*3+1):(i*3)] %>% 
-#             as_tibble()
-#     })
-#         # rename(aphiaID = AphiaID)
-
-#     df_wide <- df_long %>% 
-#         pivot_wider(., id_cols = !aphiaID, names_from = rank, values_from = scientificname) %>% 
-#         mutate(aphiaID = aphiaID, .before = everything())
-
-#     if (df == "wide") {
-#         result(df_wide, reqres@exit) %>% return()
-#     } else if (df == "long") {    
-#         result(df_long, reqres@exit) %>% return()
-#     }
-# }
 
 #' @importFrom dplyr bind_rows
 #' @importFrom tibble tibble
