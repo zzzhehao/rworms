@@ -7,6 +7,7 @@
 AphiaChildrenByAphiaID(
   aphiaID,
   recursive = T,
+  rank = "Species",
   accept = T,
   marine = T,
   extant = T
@@ -14,6 +15,8 @@ AphiaChildrenByAphiaID(
 }
 \arguments{
 \item{recursive}{logical. Whether to loop through children that are not species. If \code{TRUE} (default), all species belonging to given taxon is returned, if \code{FALSE}, only the direct children are returned.}
+
+\item{rank}{Character. The lowest taxonomic rank to be retrieved. Default is "species".}
 
 \item{accept}{logical. Whether to only return the accepted taxa.}
 

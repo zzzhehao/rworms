@@ -2,7 +2,7 @@
 % Please edit documentation in R/ui.R
 \name{get_taxonomy}
 \alias{get_taxonomy}
-\title{Get taxonomy (Records) from Aphia IDs}
+\title{Get taxonomy information (Records) from Aphia IDs}
 \usage{
 get_taxonomy(aphiaIDs)
 }
@@ -13,5 +13,8 @@ get_taxonomy(aphiaIDs)
 A dataframe with one row of taxonomic information.
 }
 \description{
-Get taxonomy (Records) from Aphia IDs
+Get the taxonomy information of a given aphia ID.
+}
+\seealso{
+\code{\link[=get_taxonomy_hr]{get_taxonomy_hr()}}
 }

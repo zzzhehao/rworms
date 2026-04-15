@@ -4,16 +4,23 @@
 \alias{get_taxonomy_hr}
 \title{Get taxonomy (records) of all species from a high taxon}
 \usage{
-get_taxonomy_hr(aphiaID, ...)
+get_taxonomy_hr(aphiaID, recursive = TRUE, ...)
 }
 \arguments{
 \item{aphiaID}{Numeric. An Aphia ID of higher taxon (> species).}
 
+\item{recursive}{Logical. Whether to get the taxonomy of direct children only (FALSE). Default is TRUE, which means to get the taxonomy of all members recursively untill it reaches the lowest level given by \code{rank}.}
+
 \item{...}{Further arguments passed to \code{\link[=AphiaChildrenByAphiaID]{AphiaChildrenByAphiaID()}}}
+
+\item{rank}{Character. The lowest taxonomic rank to be retrieved. Default is "Species". If recursive is TRUE, the function will retrieve all members until it reaches the specified rank. If recursive is FALSE, this argument will be ignored.}
 }
 \value{
 A dataframe with taxonomic information of all species of \code{aphiaID}.
 }
 \description{
-Get taxonomy (records) of all species from a high taxon
+Get the taxonomy information of all members of the given aphia ID.
+}
+\seealso{
+\code{\link[=get_taxonomy]{get_taxonomy()}}
 }

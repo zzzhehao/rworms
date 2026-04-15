@@ -1,10 +1,10 @@
 Package: rworms
 Title: R for World Register of Marine Species (WoRMS)
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Zhehao", "Hu", , "hu_zhehao@hotmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0009-0006-2408-1513"))
-Description: What the package does (one paragraph).
+Description: A tool kit for more taxonomist-friendly functions bundle for accessing WoRMS (World Register of Marine Species) webservices via REST.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -12,4 +12,10 @@ RoxygenNote: 7.3.2
 URL: https://github.com/zzzhehao/rworms
 BugReports: https://github.com/zzzhehao/rworms/issues
 Imports: 
-    S7
+    S7,
+    dplyr,
+    tidyr,
+    rlang,
+    purrr,
+    httr,
+    jsonlite

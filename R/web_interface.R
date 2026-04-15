@@ -25,7 +25,7 @@
 
 #' Safe Bind Rows for API Schemas
 #' 
-#' Some columns at certain API request will return empty values, such as retrieving direct children at family level, species will be empty. Merging the request result together where certain column is empty at one hand side and not empty on the other hand causes crashes with \code{bind_rows}. This function checks before hand and convert the empty (logical) column to type of the corresponding column in the other dara frame. 
+#' Some columns at certain API request will return empty values, such as retrieving direct children at family level, species will be empty. Merging the request result together where these columns are empty at one hand side and not empty on the other hand causes crashes with \code{bind_rows}. This function checks before hand and convert the empty3 (logical) column to type of the corresponding column in the other dara frame. 
 #' 
 #' @importFrom dplyr bind_rows
 .safe_bind_rows <- function(df1, df2) {
@@ -61,6 +61,26 @@
     }
     
     dplyr::bind_rows(df1, df2)
+}
+
+# Normalize API-returned column types to avoid bind_rows type mismatches
+.sanitize_api_types <- function(df) {
+    if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) return(df)
+    df[] <- lapply(df, function(col) {
+        if (is.factor(col)) {
+            as.character(col)
+        } else if (is.logical(col)) {
+            # convert logicals to character to avoid type conflicts
+            if (all(is.na(col))) {
+                rep(NA_character_, length(col))
+            } else {
+                as.character(col)
+            }
+        } else {
+        col
+        }
+    })
+    df
 }
 
 AphiaNameByAphiaID <- function(aphiaID) {
@@ -126,72 +146,6 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
     if (idx) {return(isna.ls)} else {return(isvalid)}
 }
 
-# #' @importFrom dplyr bind_rows
-# #' @importFrom dplyr filter
-# #' @importFrom dplyr pull
-# #' @importFrom dplyr %>% 
-# #' @importFrom dplyr rename
-# #' @importFrom purrr map
-# #' @importFrom purrr map_dfr
-# .get_AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = "true", extant = "true", pb) {
-#     # init
-#     url_root <- sprintf("%s/AphiaChildrenByAphiaID/", .db_url())
-#     offset <- 1
-#     result <- data.frame()
-
-#     repeat({
-#         request <- sprintf(
-#             "%s%d?marine_only=%s&extant_only=%s&offset=%d", 
-#             url_root, aphiaID, marine, extant, offset
-#         )
-#         reqres <- request(request)
-#         if (reqres@exit == 1) {
-#             break
-#         } else {
-#             offset <- offset + 50
-#             result <- bind_rows(result, reqres@value)
-#         }
-#         cli::cli_progress_update(id = pb)
-#     })
-
-#     # exit if nothing retrieved
-#     if (all(dim(result) == c(0, 0))) {return(list(value = invisible(NULL), exit = 1))}
-
-#     # filter: only accepted names
-#     if (accept) {
-#         result <- result %>% 
-#             filter(status == "accepted")
-#     }
-
-#     # return if not recursive
-#     if (!recursive) {return(list(value = result, exit = 0))}
-
-#     aphiaID_highrank <- result %>% 
-#         filter(rank != "Species") %>% 
-#         # rename(aphiaID = AphiaID) %>% 
-#         pull(aphiaID) 
-
-#     # return if no higher rank to loop
-#     if (length(aphiaID_highrank) == 0) {return(list(value = result, exit = 0))}
-
-#     # recursive step
-#     result_rec <- map(aphiaID_highrank, ~{
-#         .get_AphiaChildrenByAphiaID(.x, T, T, marine, extant, pb)
-#     })
-#     result_rec <- result_rec %>% 
-#         rlist::list.filter(exit == 0) %>% 
-#         map_dfr(~.x$value) 
-
-#     result_merged <- bind_rows(
-#         result %>% filter(!aphiaID %in% aphiaID_highrank),
-#         result_rec 
-#     )
-
-#     # exit if no children
-#     if (all(dim(result_merged) == c(0, 0))) {return(list(value = invisible(NA), exit = 1))}
-
-#     return(list(value = result_merged, exit = 0))
-# }
 
 #' @importFrom dplyr bind_rows
 #' @importFrom dplyr filter
@@ -200,7 +154,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
 #' @importFrom dplyr rename
 #' @importFrom purrr map
 #' @importFrom purrr map_dfr
-.get_AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = "true", extant = "true", pb) {
+.get_AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, to_rank = "Species", accept = T, marine = "true", extant = "true", pb) {
     # init
     url_root <- sprintf("%s/AphiaChildrenByAphiaID/", .db_url())
     offset <- 1
@@ -216,8 +170,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
             break
         } else {
             offset <- offset + 50
-            
-            # FIX: Enforce character type for optional columns to prevent bind_rows() type mismatch error
+        
             batch_data <- reqres@value
             if ("unacceptreason" %in% names(batch_data)) {
                 batch_data$unacceptreason <- as.character(batch_data$unacceptreason)
@@ -227,6 +180,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
                 batch_data$valid_authority <- as.character(batch_data$valid_authority)
             }
 
+            # Enforce character type for optional columns to prevent bind_rows() type mismatch error
             result <- .safe_bind_rows(result, batch_data)
         }
         cli::cli_progress_update(id = pb)
@@ -245,7 +199,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
     if (!recursive) {return(list(value = result, exit = 0))}
 
     aphiaID_highrank <- result %>% 
-        filter(rank != "Species") %>% 
+        filter(rank != to_rank) %>% 
         # rename(aphiaID = AphiaID) %>% 
         pull(aphiaID) 
 
@@ -254,7 +208,7 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
 
     # recursive step
     result_rec <- map(aphiaID_highrank, ~{
-        .get_AphiaChildrenByAphiaID(.x, T, T, marine, extant, pb)
+        .get_AphiaChildrenByAphiaID(.x, recursive = T, to_rank = to_rank, accept = accept, marine = marine, extant = extant, pb)
     })
     
     # We must also ensure the recursive results are bound safely
@@ -279,10 +233,11 @@ AphiaRecordsByAphiaIDs <- function(aphiaIDs) {
 #' Retrieving Childrens from an Aphia ID
 #' @export
 #' @param recursive logical. Whether to loop through children that are not species. If \code{TRUE} (default), all species belonging to given taxon is returned, if \code{FALSE}, only the direct children are returned.
+#' @param rank Character. The lowest taxonomic rank to be retrieved. Default is "species".
 #' @param accept logical. Whether to only return the accepted taxa.
 #' @param marine logical. Whether to only return the marine taxa.
 #' @param extant logical. Whether to only return the extant taxa. 
-AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = T, extant = T) {
+AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, rank = "Species", accept = T, marine = T, extant = T) {
     .is_valid_aphiaID(aphiaID)
     if (marine) {marine <- "true"} else {marine <- "false"}
     if (extant) {extant <- "true"} else {extant <- "false"}
@@ -292,7 +247,7 @@ AphiaChildrenByAphiaID <- function(aphiaID, recursive = T, accept = T, marine = 
         total = NA 
     )
 
-    result <- .get_AphiaChildrenByAphiaID(aphiaID, recursive, accept, marine, extant, pb)
+    result <- .get_AphiaChildrenByAphiaID(aphiaID, recursive, rank, accept, marine, extant, pb)
 
     cli::cli_progress_done(id = pb)
 
